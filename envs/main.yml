@@ -1,0 +1,23 @@
+name: main
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+    - python =3.8
+    - nanofilt =2.8
+    - nanostat =1.6.0
+    - graphaligner
+    - seqtk
+    - minimap2
+    - samtools
+    - tensorflow =2.6
+    - nanocaller
+    - pip
+    - pip:
+        - requests
+        - pandas
+        - numpy
+        - seaborn
+        - jinja2
+        - protobuf==3.20.1

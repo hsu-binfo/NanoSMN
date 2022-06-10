@@ -1,0 +1,24 @@
+#########################
+# Run configuration
+#########################
+inputdir: "data"
+input_fn_pattern: "{sample}.fq.gz"
+outdir: "output"
+logdir: "output/logs"
+tmpdir: "/tmp"            # Specifying a tmpdir is not normally necessary but some tools like HUMAnN requires it. If required please enter path to a temp directory e.g. /scratch
+dbdir: "databases"        # Databases will be downloaded to this dir, if requested
+email: ""
+
+keep_output: True
+
+#########################
+# Preprocessing
+#########################
+NanoFilt:
+  extra: "--headcrop 10 --tailcrop 10 --length 2000 --maxlength 16000"
+
+#############################
+# Graph Alignment
+#############################
+graph_alignment:
+  extra: "--min-alignment-score 1000"
