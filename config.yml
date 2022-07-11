@@ -15,10 +15,10 @@ keep_output: True
 # Preprocessing
 #########################
 NanoFilt:
-  extra: "--headcrop 10 --tailcrop 10 --length 2000 --maxlength 16000"
+  extra: "--headcrop 10 --tailcrop 10 --length 12000 --maxlength 16000"
 
 #############################
 # Graph Alignment
 #############################
 graph_alignment:
-  extra: "--min-alignment-score 1000"
+  extra: ""

@@ -7,8 +7,8 @@ OUTDIR = Path(config["outdir"])
 LOGDIR = Path(config["logdir"])
 all_outputs = []
 
-# SAMPLES = set(glob_wildcards(INPUTDIR/"samples"/config["input_fn_pattern"]).sample)
-SAMPLES = ['SMN15_D15347_NP11001_BC15']
+SAMPLES = set(glob_wildcards(INPUTDIR/"samples"/config["input_fn_pattern"]).sample)
+# SAMPLES = ['SMN01_D13237_NP11001_BC01']
 TYPES = ('SMN1', 'SMN2')
 # print(TYPES)
 

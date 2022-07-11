@@ -30,6 +30,10 @@
       Sample: {{sample}}
       <div class="analysis-block">
         <h2>Read Summary</h2>
+          <div class="mb-3">
+            <h5>Filter Parameters:</h5>
+              <strong>Average Quality Score</strong> >= 10, <strong>Min Read Length:</strong> 12,000 bps, <strong>Max Read Length:</strong> 16,000 bps <br />
+          </div>
           <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
           <li class="nav-item" role="presentation">
             <button class="nav-link active" id="pills-read-length-tab" data-bs-toggle="pill" data-bs-target="#pills-read-length" type="button" role="tab" aria-controls="pills-read-length" aria-selected="true">Read Length</button>
@@ -117,12 +121,12 @@
       <div class="analysis-block">
         <h2>Variant Analysis</h2>
 
-        <h3>Variations in SMN1</h3>
+        <h3>Variations in SMN1 (NM_000344.4)</h3>
         <div class="table-responsive">
           {{SMN1_vep}}
         </div>
 
-        <h3>Variations in SMN2</h3>
+        <h3>Variations in SMN2 (NM_017411.4)</h3>
         <div class="table-responsive">
           {{SMN2_vep}}
         </div>

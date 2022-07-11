@@ -1,3 +1,4 @@
 .snakemake
 output*
 data/samples/*
+utils/__pycache__/

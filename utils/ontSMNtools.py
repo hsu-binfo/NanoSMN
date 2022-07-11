@@ -41,7 +41,6 @@ class ontSMNtools:
         SMN1 = ('SMN1', sum),
         SMN2 = ('SMN2', sum)
       ).reset_index()
-      print(df_stat)
       
       df_stat['total'] = df_stat['SMN1'] + df_stat['SMN2']
       df_stat['SMN1_percentage'] = df_stat['SMN1'] / df_stat['total']
@@ -118,9 +117,9 @@ class ontSMNtools:
     (SMN1, SMN2, SMN_ratio) = self.__get_SMN_ratio(read_types)
 
     SMN1_vep = os.path.join(self.__path, sample, "SMN1.variant_calls.final.vep")
-    SMN1_vep_data = pd.read_csv(SMN1_vep, sep="\t").to_html(index=False, border=0, justify='left', classes='table table-striped table-hover')
+    SMN1_vep_data = pd.read_csv(SMN1_vep, sep="\t").to_html(index=False, escape=False, border=0, justify='left', classes='table table-striped table-hover')
     SMN2_vep = os.path.join(self.__path, sample, "SMN2.variant_calls.final.vep")
-    SMN2_vep_data = pd.read_csv(SMN2_vep, sep="\t").to_html(index=False, border=0, justify='left', classes='table table-striped table-hover')
+    SMN2_vep_data = pd.read_csv(SMN2_vep, sep="\t").to_html(index=False, escape=False, border=0, justify='left', classes='table table-striped table-hover')
 
     content = template.render(
       sample=sample,
@@ -389,7 +388,7 @@ class ontSMNtools:
       start = 70062676
     return start+row['POS']-1
 
-  def __run_vep(self, ext, return_data):
+  def __run_vep(self, ext, return_data, allele_freq):
     server = "https://rest.ensembl.org"
     r = requests.get(server+ext, headers={ "Content-Type" : "application/json"})
     if not r.ok:
@@ -397,43 +396,64 @@ class ontSMNtools:
       sys.exit()
   
     vep = r.json()[0]
+    # SMN1: ENST00000380707
+    # SMN2: ENST00000380743
     
-    most_severe_consequence = vep['most_severe_consequence']
-    most_severe_consequence_obj = next((m for m in vep['transcript_consequences'] if most_severe_consequence in m.get('consequence_terms')), None)
+    target_transcripts = ['ENST00000380707', 'ENST00000380743']
+    target_consequence_obj = next(
+      (m for m in vep['transcript_consequences'] if m.get('transcript_id') in target_transcripts),
+      None
+    )
     return_data += [
       vep['allele_string'],
-      most_severe_consequence_obj['gene_id'],
-      most_severe_consequence_obj['transcript_id'],
-      ",".join(most_severe_consequence_obj['consequence_terms'])
+      allele_freq,
+      ",".join(target_consequence_obj['consequence_terms'])
     ]
-    cdna_start = '-'
-    if 'cdna_start' in most_severe_consequence_obj:
-      cdna_start = str(most_severe_consequence_obj['cdna_start'])
-    cds_start = '-'
-    if 'cds_start' in most_severe_consequence_obj:
-      cds_start = str(most_severe_consequence_obj['cds_start'])
-    protein_start = '-'
-    if 'protein_start' in most_severe_consequence_obj:
-      protein_start = str(most_severe_consequence_obj['protein_start'])
-    amino_acids = '-'
-    if 'amino_acids' in most_severe_consequence_obj:
-      amino_acids = most_severe_consequence_obj['amino_acids']
-    codons = '-'
-    if 'codons' in most_severe_consequence_obj:
-      codons = most_severe_consequence_obj['codons']
 
-    return_data += [cdna_start, cds_start, protein_start, amino_acids, codons]
+    cds_change = None
+    protein_change = None
+    if 'hgvsc' in target_consequence_obj:
+      cds_change = target_consequence_obj['hgvsc'].split(":")[1]
+    if 'hgvsp' in target_consequence_obj:
+      protein_change = target_consequence_obj['hgvsp'].split(":")[1]
+    if 'intron' in target_consequence_obj:
+      intron_number = target_consequence_obj['intron'].split("/")[0]
+      info = 'ISV{} {}'.format(intron_number, cds_change)
+    else:
+      exon_number = target_consequence_obj['exon'].split("/")[0]
+      info = "EXON {} {};{}".format(exon_number, cds_change, protein_change)
+    return_data += [info]
+
     existing_variations = []
+    clinical_significants = []
     if 'colocated_variants' in vep:
       for v in vep['colocated_variants']:
-        existing_variations.append(v['id'])
-      return_data.append(",".join(existing_variations))
-    extra = "IMPACT={};STRAND={}".format(most_severe_consequence_obj['impact'], most_severe_consequence_obj['strand'])
+        ## Existing_variation
+        if re.match('^rs', v['id']):
+          existing_variations.append('<a href="https://www.ncbi.nlm.nih.gov/snp/{}" target="_blank">{}</a>'.format(v['id'], v['id']))
+        elif re.match('^COSV', v['id']):
+          existing_variations.append('<a href="https://cancer.sanger.ac.uk/cosmic/search?q={}" target="_blank">{}</a>'.format(v['id'], v['id']))
+        else:
+          existing_variations.append(v['id'])
 
-    if 'exon' in most_severe_consequence_obj:
-      extra += ";EXON={}".format(most_severe_consequence_obj['exon'])
-    if 'intron' in most_severe_consequence_obj:
-      extra += ";INTRON={}".format(most_severe_consequence_obj['intron'])
+        ## ClinVar
+        clinvar_link = []
+        if 'var_synonyms' in v:
+          clinvar_list = v['var_synonyms'].get('ClinVar')
+          for clinvar_id in clinvar_list:
+            if re.match('^RCV', clinvar_id):
+              clinvar_link.append('<a href="https://www.ncbi.nlm.nih.gov/clinvar/{}/" target="_blank">{}</a>'.format(clinvar_id, clinvar_id))
+
+          clin_sig = "{} ({})".format(
+            '/'.join(clinvar_link),
+            '/'.join(v.get('clin_sig'))
+          )
+          clinical_significants.append(clin_sig)
+    return_data += [",".join(existing_variations), ",".join(clinical_significants)]
+
+      
+    extra = "IMPACT={};STRAND={}".format(target_consequence_obj['impact'], target_consequence_obj['strand'])
+
     return_data.append(extra)
     return return_data
 
@@ -443,20 +463,20 @@ class ontSMNtools:
     f = open(output_file, "w")
 
     headers = [
-      'ID', 'Location', 'Allele', 'Gene', 'Feature', 'Consequence', 'cDNA_position', 'CDS_position',
-      'Protein_position', 'Amino_acids', 'Codons', 'Existing_variation', 'Extra'
+      'Location', 'Allele', 'Genotype(GT:DP:FQ)', 'Consequence', 'Information', 'Existing_variation', 'ClinVar', 'Extra'
     ]
     f.write("\t".join(headers)+"\n")
     for item in vcf.itertuples():
       start = item.CHROM_POS
       end = item.CHROM_POS-1+len(item.REF)
       alts = item.ALT.split(',')
+      freq = item.SAMPLE
 
       for alt in alts:
-        ext = "/vep/human/region/5:{}:{}/{}?numbers=1".format(start, end, alt)
+        ext = "/vep/human/region/5:{}:{}/{}?numbers=1&hgvs=1".format(start, end, alt)
       
-        return_data = [item.CHROM, "5:{}".format(start)]
-        return_data = self.__run_vep(ext, return_data)
+        return_data = ["5:{}".format(start)]
+        return_data = self.__run_vep(ext, return_data, freq)
 
         f.write("\t".join(return_data)+"\n")
     f.close()
